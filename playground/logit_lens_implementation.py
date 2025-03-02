@@ -70,3 +70,14 @@ fig.update_layout(
 fig.update_traces(text=words, texttemplate="%{text}")
 fig.show()
 # %%
+prompt = 'The Eiffel Tower is in the city of'
+n_new_tokens = 10
+with model.generate(prompt, max_new_tokens=n_new_tokens, remote=True) as tracer:
+    out = model.generator.output.save()
+
+decoded_prompt = model.tokenizer.decode(out[0][0:-n_new_tokens].cpu())
+decoded_answer = model.tokenizer.decode(out[0][-n_new_tokens:].cpu())
+
+print("Prompt: ", decoded_prompt)
+print("Generated Answer: ", decoded_answer)
+# %%
