@@ -39,23 +39,27 @@ def generate_logit_lens_data(token: str) -> List[LayerData]:
         predictions = []
         actual_token_prob = 0.1 + (i / 24) * 0.89
 
-        # Add alternatives in early layers
+        # Add alternatives in early layers with varying probabilities
         if i < 20:
             alternatives = get_alternative_tokens(token)
+            # In early layers, alternatives might be more likely
+            alt_prob_1 = max((20 - i) / 20 * 100, actual_token_prob * 100 * 0.8)
+            alt_prob_2 = max((20 - i) / 20 * 50, actual_token_prob * 100 * 0.4)
+            
             predictions.extend([
                 Prediction(
                     token=alternatives[0],
-                    probability=(1 - actual_token_prob) * 70,
+                    probability=alt_prob_1,
                     rank=1
                 ),
                 Prediction(
                     token=alternatives[1],
-                    probability=(1 - actual_token_prob) * 30,
+                    probability=alt_prob_2,
                     rank=2
                 )
             ])
 
-        # Add actual token
+        # Add actual token with increasing probability in later layers
         predictions.append(
             Prediction(
                 token=token,

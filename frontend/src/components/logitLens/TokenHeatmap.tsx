@@ -8,18 +8,6 @@ interface TokenHeatmapProps {
 }
 
 const TokenHeatmap: React.FC<TokenHeatmapProps> = ({ lensData, actualToken, contextTokens }) => {
-  // Include all context tokens plus the actual token
-  const displayTokens = [...contextTokens.map(t => t.text), actualToken];
-  
-  // Create a map of token to its lens data
-  const tokenLensMap = new Map<string, LayerData[]>();
-  contextTokens.forEach(token => {
-    if (token.lensData) {
-      tokenLensMap.set(token.text, token.lensData);
-    }
-  });
-  tokenLensMap.set(actualToken, lensData);
-  
   // Get color for probability
   const getProbabilityColor = (probability: number) => {
     if (probability >= 90) return 'bg-blue-900 text-white';
@@ -29,55 +17,62 @@ const TokenHeatmap: React.FC<TokenHeatmapProps> = ({ lensData, actualToken, cont
     if (probability >= 10) return 'bg-blue-200';
     return 'bg-blue-100';
   };
+
+  // Sort layers in descending order (highest layer first)
+  const sortedLayers = [...lensData].sort((a, b) => b.layer - a.layer);
+  
+  // Get all context tokens plus the current token
+  const allTokens = [...contextTokens, { text: actualToken, lensData, probability: 0 }];
   
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium mb-2">Layer Predictions Heatmap</h3>
         <p className="text-sm text-gray-600 mb-4">
-          This heatmap shows how the probability for different tokens changes across layers.
+          This heatmap shows how the model's predictions evolve through the layers for each token position.
+          Color intensity indicates prediction probability.
         </p>
         
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse">
             <thead>
               <tr>
-                <th className="p-2 border bg-gray-100 sticky left-0 z-10">Layer</th>
-                {displayTokens.map(token => (
+                <th className="p-2 border bg-gray-100 sticky left-0 z-10 text-xs">Layer</th>
+                {allTokens.map((token, idx) => (
                   <th 
-                    key={token} 
-                    className={`p-2 border ${token === actualToken ? 'bg-blue-50 font-bold' : 'bg-gray-50'}`}
+                    key={idx} 
+                    className={`p-2 border bg-gray-50 text-xs ${token.text === actualToken ? 'font-bold bg-blue-50' : ''}`}
                   >
-                    {token}
+                    {token.text}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {Array.from({ length: 24 }, (_, i) => i).map(layerIndex => {
-                return (
-                  <tr key={layerIndex}>
-                    <td className="p-2 border bg-gray-100 font-medium sticky left-0 z-10">
-                      {layerIndex}
-                    </td>
-                    {displayTokens.map(token => {
-                      const tokenLens = tokenLensMap.get(token);
-                      const layerData = tokenLens?.[layerIndex];
-                      const probability = layerData?.predictions.find(p => p.token === token)?.probability || 0;
-                      
-                      return (
-                        <td 
-                          key={token} 
-                          className={`p-2 border text-center ${getProbabilityColor(probability)}`}
-                          title={`${token}: ${probability}%`}
-                        >
-                          {probability > 0 ? `${probability}%` : '-'}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
+              {sortedLayers.map(layer => (
+                <tr key={layer.layer}>
+                  <td className="p-2 border bg-gray-100 font-medium sticky left-0 z-10 text-xs">
+                    {layer.layer}
+                  </td>
+                  {allTokens.map((token, idx) => {
+                    const tokenLensData = token.lensData || lensData;
+                    const layerData = tokenLensData.find(l => l.layer === layer.layer);
+                    const topPrediction = layerData?.predictions[0];
+                    
+                    return (
+                      <td 
+                        key={idx}
+                        className={`p-2 border text-center text-xs ${getProbabilityColor(topPrediction?.probability || 0)}`}
+                        title={`${topPrediction?.token}: ${topPrediction?.probability.toFixed(1)}%`}
+                      >
+                        <div className="font-medium whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: '100px' }}>
+                          {topPrediction?.token || '-'}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -94,7 +89,7 @@ const TokenHeatmap: React.FC<TokenHeatmapProps> = ({ lensData, actualToken, cont
             {contextTokens.map((token, index) => (
               <div 
                 key={index}
-                className={`p-2 rounded ${getProbabilityColor(token.probability)}`}
+                className={`p-2 rounded text-xs ${getProbabilityColor(token.probability)}`}
                 title={`Probability: ${token.probability}%`}
               >
                 {token.text}
