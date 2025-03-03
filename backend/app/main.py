@@ -1,8 +1,23 @@
+import torch
+import numpy as np
+from nnsight import LanguageModel
+import transformers
+from nnsight import CONFIG
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from typing import List, Dict, Any
 from .models import ConversationResponse, Token, LayerData, Prediction
+
+# Configure nnsight
+CONFIG.API.HOST = "localhost:5001"
+CONFIG.API.SSL = False
+CONFIG.API.APIKEY = "0Bb6oUQxj2TuPtlrTkny"
+
+# Initialize model
+model_name = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+torch.set_grad_enabled(False)
+model = LanguageModel(model_name, device_map="auto")
 
 app = FastAPI(title="Logit Lens API")
 
@@ -104,7 +119,15 @@ def generate_response(message: str) -> str:
 async def chat(message: Dict[str, Any]):
     try:
         user_message = message.get("text", "")
-        response_text = generate_response(user_message)
+        
+        # Generate response using the model
+        n_new_tokens = 50  # Adjust this value based on desired response length
+        with model.generate(user_message, max_new_tokens=n_new_tokens, remote=True) as tracer:
+            out = model.generator.output.save()
+
+        # Decode the generated response
+        decoded_prompt = model.tokenizer.decode(out[0][0:-n_new_tokens].cpu())
+        response_text = model.tokenizer.decode(out[0][-n_new_tokens:].cpu())
         
         # Generate token data for both user message and response
         user_tokens = [
