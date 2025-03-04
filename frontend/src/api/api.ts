@@ -14,7 +14,7 @@ export const sendMessage = async (message: string, conversationHistory: any[]): 
       },
       body: JSON.stringify({
         text: message,
-        history: conversationHistory,
+        messages: conversationHistory,
       }),
     });
 

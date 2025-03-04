@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from typing import List, Dict, Any
-from .models import ConversationResponse, Token, LayerData, Prediction
+from .models import ConversationResponse, Token, LayerData, Prediction, ChatRequest, Message
 
 # Configure nnsight
 CONFIG.API.HOST = "localhost:5001"
@@ -115,37 +115,91 @@ def generate_response(message: str) -> str:
         return "I would recommend trying the new machine learning course that was just released last month."
     return f"I understand your question about {' '.join(message.split()[-3:])}. Let me think about that."
 
-@app.post("/api/chat", response_model=ConversationResponse)
-async def chat(message: Dict[str, Any]):
-    try:
-        user_message = message.get("text", "")
-        
-        # Generate response using the model
-        n_new_tokens = 50  # Adjust this value based on desired response length
-        with model.generate(user_message, max_new_tokens=n_new_tokens, remote=True) as tracer:
-            out = model.generator.output.save()
+def format_conversation(messages: List[Message]) -> str:
+    """Format conversation history into a single string for the model."""
+    formatted = ""
+    for msg in messages:
+        if msg.role == "system":
+            formatted += f"System: {msg.content}\n"
+        elif msg.role == "user":
+            formatted += f"User: {msg.content}\n"
+        elif msg.role == "assistant":
+            formatted += f"Assistant: {msg.content}\n"
+    return formatted.strip()
 
-        # Decode the generated response
-        decoded_prompt = model.tokenizer.decode(out[0][0:-n_new_tokens].cpu())
-        response_text = model.tokenizer.decode(out[0][-n_new_tokens:].cpu())
+@app.post("/api/chat", response_model=ConversationResponse)
+async def chat(request: ChatRequest):
+    try:
+        if not request.text:
+            raise HTTPException(status_code=400, detail="Message text cannot be empty")
+
+        # Validate message roles
+        valid_roles = {"system", "user", "assistant"}
+        for message in request.messages:
+            if message.role not in valid_roles:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Invalid role: {message.role}. Must be one of: {', '.join(valid_roles)}"
+                )
+
+        # Format the entire conversation history including the new message
+        conversation_history = format_conversation(request.messages)
+        current_message = request.text.strip()
+        
+        # Combine history with current message
+        full_prompt = f"{conversation_history}\nUser: {current_message}\nAssistant:"
+
+        print(f"Full conversation context being sent to model:\n{full_prompt}\n")
+        
+        try:
+            # Generate response using the model
+            n_new_tokens = 50  # Adjust this value based on desired response length
+            with model.generate(full_prompt, max_new_tokens=n_new_tokens, remote=True) as tracer:
+                out = model.generator.output.save()
+
+            # Decode the generated response
+            decoded_prompt = model.tokenizer.decode(out[0][0:-n_new_tokens].cpu())
+            response_text = model.tokenizer.decode(out[0][-n_new_tokens:].cpu()).strip()
+            
+            if not response_text:
+                raise ValueError("Model generated empty response")
+
+            print(f"Model response: {response_text}\n")
+
+        except Exception as model_error:
+            print(f"Model error: {str(model_error)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Model generation error: {str(model_error)}"
+            )
         
         # Generate token data for both user message and response
-        user_tokens = [
-            Token(text=token, lens=generate_logit_lens_data(token))
-            for token in tokenize_text(user_message)
-        ]
-        
-        response_tokens = [
-            Token(text=token, lens=generate_logit_lens_data(token))
-            for token in tokenize_text(response_text)
-        ]
+        try:
+            user_tokens = [
+                Token(text=token, lens=generate_logit_lens_data(token))
+                for token in tokenize_text(current_message)
+            ]
+            
+            response_tokens = [
+                Token(text=token, lens=generate_logit_lens_data(token))
+                for token in tokenize_text(response_text)
+            ]
+        except Exception as token_error:
+            print(f"Token processing error: {str(token_error)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Token processing error: {str(token_error)}"
+            )
         
         return ConversationResponse(
             text=response_text,
             tokens=response_tokens,
             userTokens=user_tokens
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/health")

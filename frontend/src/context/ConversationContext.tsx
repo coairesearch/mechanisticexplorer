@@ -19,11 +19,25 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       // Get response from API
       setIsLoading(true);
       try {
+        // Start with system message
+        // const conversationHistory = [
+        //   { role: 'system', content: 'You are a helpful assistant that remembers the conversation context.' }
+        // ];
+        
         const conversationHistory = messages.map(m => ({ 
           role: m.isUser ? 'user' : 'assistant', 
           content: m.text 
         }));
+
+        // Add all previous messages
+        messages.forEach(m => {
+          conversationHistory.push({
+            role: m.isUser ? 'user' : 'assistant',
+            content: m.text
+          });
+        });
         
+        // Send request with full conversation history
         const { data, error } = await sendMessage(text, conversationHistory);
         
         if (error || !data) {
