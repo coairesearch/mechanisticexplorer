@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from typing import List, Dict, Any
 from .models import ConversationResponse, Token, LayerData, Prediction, ChatRequest, Message
+import requests
 
 # Configure nnsight
 CONFIG.API.HOST = "localhost:5001"
@@ -29,6 +30,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def load_model(model_name: str):
+    torch.set_grad_enabled(False)
+    model = LanguageModel(model_name, device_map="auto")
+    return model
 
 def get_alternative_tokens(token: str) -> List[str]:
     """Get alternative tokens for a given token."""
@@ -205,3 +211,26 @@ async def chat(request: ChatRequest):
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.get("/api/available_models")
+def get_ndif_models(host="localhost", port=5001):
+    """Get list of models running on NDIF cluster"""
+    url = f"http://{host}:{port}/stats"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        raw_models = response.json()
+        # Restructure the response to use repo_id as the main key
+        models = {}
+        for _, model_data in raw_models.items():
+            repo_id = model_data.get('repo_id')
+            if repo_id:
+                models[repo_id] = {
+                    'num_running_replicas': model_data['num_running_replicas'],
+                    'config_json_string': model_data['config_json_string']
+                }
+        return models
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
