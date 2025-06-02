@@ -8,3 +8,4 @@ transformers>=4.30.0
 numpy
 matplotlib
 plotly
+lz4

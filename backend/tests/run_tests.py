@@ -33,10 +33,12 @@ def main():
     
     # Define test files in order of importance
     test_files = [
-        "test_nnsight_basic.py",      # Basic nnsight functionality
-        "test_logit_lens.py",         # LogitLensExtractor functionality
-        "test_api_functions.py",      # API function testing
-        "test_api_integration.py",    # Full integration test
+        "test_nnsight_basic.py",           # Basic nnsight functionality
+        "test_logit_lens.py",              # LogitLensExtractor functionality
+        "test_api_functions.py",           # API function testing
+        "test_api_integration.py",         # Full integration test
+        "test_caching_system.py",          # Caching system tests
+        "test_cached_api_integration.py",  # Cached API integration tests
     ]
     
     print("🔬 Running Mechanistic Explorer Backend Tests")
