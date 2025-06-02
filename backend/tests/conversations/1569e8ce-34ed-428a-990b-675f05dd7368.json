@@ -1,0 +1,402 @@
+{
+  "global_tokens": [
+    {
+      "text": "What",
+      "id": 2061,
+      "global_position": 0,
+      "local_position": 0,
+      "is_user": true,
+      "message_id": null,
+      "message_start": true,
+      "timestamp": 1748895877.400031,
+      "cached": true
+    },
+    {
+      "text": " is",
+      "id": 318,
+      "global_position": 1,
+      "local_position": 1,
+      "is_user": true,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895877.400038,
+      "cached": true
+    },
+    {
+      "text": " machine",
+      "id": 4572,
+      "global_position": 2,
+      "local_position": 2,
+      "is_user": true,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895877.400043,
+      "cached": true
+    },
+    {
+      "text": " learning",
+      "id": 4673,
+      "global_position": 3,
+      "local_position": 3,
+      "is_user": true,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895877.400048,
+      "cached": true
+    },
+    {
+      "text": "?",
+      "id": 30,
+      "global_position": 4,
+      "local_position": 4,
+      "is_user": true,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895877.400052,
+      "cached": true
+    },
+    {
+      "text": "Machine",
+      "id": 37573,
+      "global_position": 5,
+      "local_position": 0,
+      "is_user": false,
+      "message_id": null,
+      "message_start": true,
+      "timestamp": 1748895878.579092,
+      "cached": true
+    },
+    {
+      "text": " learning",
+      "id": 4673,
+      "global_position": 6,
+      "local_position": 1,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.5790982,
+      "cached": true
+    },
+    {
+      "text": " is",
+      "id": 318,
+      "global_position": 7,
+      "local_position": 2,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579103,
+      "cached": true
+    },
+    {
+      "text": " a",
+      "id": 257,
+      "global_position": 8,
+      "local_position": 3,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579107,
+      "cached": true
+    },
+    {
+      "text": " new",
+      "id": 649,
+      "global_position": 9,
+      "local_position": 4,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.5791109,
+      "cached": true
+    },
+    {
+      "text": " field",
+      "id": 2214,
+      "global_position": 10,
+      "local_position": 5,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579115,
+      "cached": true
+    },
+    {
+      "text": " of",
+      "id": 286,
+      "global_position": 11,
+      "local_position": 6,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.5791192,
+      "cached": true
+    },
+    {
+      "text": " research",
+      "id": 2267,
+      "global_position": 12,
+      "local_position": 7,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579123,
+      "cached": true
+    },
+    {
+      "text": " that",
+      "id": 326,
+      "global_position": 13,
+      "local_position": 8,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579128,
+      "cached": true
+    },
+    {
+      "text": " has",
+      "id": 468,
+      "global_position": 14,
+      "local_position": 9,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.5791318,
+      "cached": true
+    },
+    {
+      "text": " been",
+      "id": 587,
+      "global_position": 15,
+      "local_position": 10,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579136,
+      "cached": true
+    },
+    {
+      "text": " around",
+      "id": 1088,
+      "global_position": 16,
+      "local_position": 11,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.5791402,
+      "cached": true
+    },
+    {
+      "text": " for",
+      "id": 329,
+      "global_position": 17,
+      "local_position": 12,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579144,
+      "cached": true
+    },
+    {
+      "text": " a",
+      "id": 257,
+      "global_position": 18,
+      "local_position": 13,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579148,
+      "cached": true
+    },
+    {
+      "text": " long",
+      "id": 890,
+      "global_position": 19,
+      "local_position": 14,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.5791519,
+      "cached": true
+    },
+    {
+      "text": " time",
+      "id": 640,
+      "global_position": 20,
+      "local_position": 15,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579156,
+      "cached": true
+    },
+    {
+      "text": ".",
+      "id": 13,
+      "global_position": 21,
+      "local_position": 16,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.57916,
+      "cached": true
+    },
+    {
+      "text": " It",
+      "id": 632,
+      "global_position": 22,
+      "local_position": 17,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.5791638,
+      "cached": true
+    },
+    {
+      "text": "'s",
+      "id": 338,
+      "global_position": 23,
+      "local_position": 18,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579168,
+      "cached": true
+    },
+    {
+      "text": " a",
+      "id": 257,
+      "global_position": 24,
+      "local_position": 19,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.5791721,
+      "cached": true
+    },
+    {
+      "text": " new",
+      "id": 649,
+      "global_position": 25,
+      "local_position": 20,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579177,
+      "cached": true
+    },
+    {
+      "text": " field",
+      "id": 2214,
+      "global_position": 26,
+      "local_position": 21,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.5791821,
+      "cached": true
+    },
+    {
+      "text": " of",
+      "id": 286,
+      "global_position": 27,
+      "local_position": 22,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579186,
+      "cached": true
+    },
+    {
+      "text": " research",
+      "id": 2267,
+      "global_position": 28,
+      "local_position": 23,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.57919,
+      "cached": true
+    },
+    {
+      "text": " that",
+      "id": 326,
+      "global_position": 29,
+      "local_position": 24,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579196,
+      "cached": true
+    },
+    {
+      "text": " has",
+      "id": 468,
+      "global_position": 30,
+      "local_position": 25,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579201,
+      "cached": true
+    },
+    {
+      "text": " been",
+      "id": 587,
+      "global_position": 31,
+      "local_position": 26,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579205,
+      "cached": true
+    },
+    {
+      "text": " around",
+      "id": 1088,
+      "global_position": 32,
+      "local_position": 27,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.5792089,
+      "cached": true
+    },
+    {
+      "text": " for",
+      "id": 329,
+      "global_position": 33,
+      "local_position": 28,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.5792131,
+      "cached": true
+    },
+    {
+      "text": " a",
+      "id": 257,
+      "global_position": 34,
+      "local_position": 29,
+      "is_user": false,
+      "message_id": null,
+      "message_start": false,
+      "timestamp": 1748895878.579217,
+      "cached": true
+    }
+  ],
+  "message_boundaries": [
+    0,
+    5
+  ],
+  "metadata": {
+    "conversation_id": "1569e8ce-34ed-428a-990b-675f05dd7368",
+    "created": 1748895877.3997838,
+    "last_updated": 1748895878.579218,
+    "total_tokens": 35,
+    "total_messages": 2,
+    "user_tokens": 5,
+    "assistant_tokens": 30
+  }
+}
