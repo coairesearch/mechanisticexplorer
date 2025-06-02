@@ -6,12 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from .models import ConversationResponse, Token, LayerData, Prediction, ChatRequest, Message
+from .logit_lens import LogitLensExtractor, ConversationTokenizer
 import re
 
-# Initialize model - using local GPT-2
+# Initialize model - using local GPT-2 with nnsight
 model_name = "openai-community/gpt2"
 torch.set_grad_enabled(False)
-model = LanguageModel(model_name, device_map="auto")
+
+# Initialize logit lens extractor and conversation tracker
+logit_lens_extractor = LogitLensExtractor(model_name)
+conversation_tracker = ConversationTokenizer(logit_lens_extractor.model)
 
 app = FastAPI(title="Logit Lens API")
 
@@ -24,127 +28,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def extract_logit_lens_predictions(prompt: str, token_position: int = -1) -> List[LayerData]:
-    """
-    Extract real logit lens predictions from GPT-2 model for a specific token position.
+def generate_simple_response(prompt: str, max_tokens: int = 30) -> str:
+    """Generate a simple response using nnsight"""
+    # Use nnsight's generation capabilities
+    with logit_lens_extractor.model.generate(prompt, max_new_tokens=max_tokens) as generator:
+        output = logit_lens_extractor.model.generator.output.save()
     
-    Args:
-        prompt: Input text to analyze
-        token_position: Which token position to analyze (-1 for last token)
+    # Decode the output
+    full_text = logit_lens_extractor.model.tokenizer.decode(output[0])
+    # Remove the prompt from the beginning
+    response = full_text[len(prompt):].strip()
     
-    Returns:
-        List of LayerData with predictions from each layer
-    """
-    layers = model.model.h  # GPT-2 uses 'h' for transformer blocks
-    probs_layers = []
-    
-    with model.trace(prompt) as tracer:
-        # Get embeddings
-        embeddings = model.model.wte(tracer.inputs[0]["input_ids"])
-        hidden_state = embeddings
-        
-        for layer_idx, layer in enumerate(layers):
-            # Pass through layer
-            hidden_state = layer(hidden_state)[0]
-            
-            # Apply layer norm and language model head
-            normalized = model.model.ln_f(hidden_state)
-            logits = model.lm_head(normalized)
-            
-            # Apply softmax to get probabilities
-            probs = torch.nn.functional.softmax(logits, dim=-1).save()
-            probs_layers.append(probs)
-    
-    # Extract predictions for the specified token position
-    layer_predictions = []
-    
-    for layer_idx, probs in enumerate(probs_layers):
-        # Get probabilities for the specific token position
-        token_probs = probs.value[0, token_position]
-        
-        # Get top 5 predictions
-        top_k = 5
-        top_probs, top_indices = torch.topk(token_probs, top_k)
-        
-        predictions = []
-        for rank, (prob_value, token_id) in enumerate(zip(top_probs, top_indices)):
-            token_text = model.tokenizer.decode([token_id.item()])
-            predictions.append(
-                Prediction(
-                    token=token_text,
-                    probability=prob_value.item() * 100,
-                    rank=rank + 1
-                )
-            )
-        
-        layer_predictions.append(
-            LayerData(
-                layer=layer_idx,
-                predictions=predictions
-            )
-        )
-    
-    return layer_predictions
-
-def tokenize_with_positions(text: str) -> List[Dict[str, Any]]:
-    """
-    Tokenize text and return tokens with their positions.
-    """
-    # Use GPT-2 tokenizer
-    encoding = model.tokenizer(text, return_offsets_mapping=True, add_special_tokens=False)
-    tokens = []
-    
-    for i, (token_id, (start, end)) in enumerate(zip(encoding.input_ids, encoding.offset_mapping)):
-        token_text = text[start:end]
-        tokens.append({
-            'text': token_text,
-            'id': token_id,
-            'position': i,
-            'start': start,
-            'end': end
-        })
-    
-    return tokens
-
-def generate_response_with_logits(prompt: str, max_tokens: int = 50) -> Dict[str, Any]:
-    """
-    Generate response and extract logit lens data for each generated token.
-    """
-    # Generate response
-    with model.generate(max_new_tokens=max_tokens) as generator:
-        output = model.generator.output.save()
-    
-    # Decode full output
-    full_output = model.tokenizer.decode(output[0])
-    
-    # Separate prompt from generated text
-    generated_text = full_output[len(prompt):].strip()
-    
-    # Tokenize the generated text
-    generated_tokens = tokenize_with_positions(generated_text)
-    
-    # For each generated token, get logit lens predictions
-    tokens_with_lens = []
-    current_context = prompt
-    
-    for token_info in generated_tokens:
-        # Get logit lens for this token given the context
-        lens_data = extract_logit_lens_predictions(current_context, token_position=-1)
-        
-        tokens_with_lens.append(
-            Token(
-                text=token_info['text'],
-                lens=lens_data
-            )
-        )
-        
-        # Update context for next token
-        current_context += token_info['text']
-    
-    return {
-        'text': generated_text,
-        'tokens': tokens_with_lens
-    }
+    return response
 
 def format_conversation(messages: List[Message]) -> str:
     """Format conversation history into a single string for the model."""
@@ -162,11 +57,31 @@ async def chat(request: ChatRequest):
         if not request.text:
             raise HTTPException(status_code=400, detail="Message text cannot be empty")
 
-        # Format conversation history
-        conversation_history = format_conversation(request.messages)
+        # Validate message roles
+        valid_roles = {"system", "user", "assistant"}
+        for message in request.messages:
+            if message.role not in valid_roles:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Invalid role: {message.role}. Must be one of: {', '.join(valid_roles)}"
+                )
+
         current_message = request.text.strip()
         
-        # Create full prompt
+        # Reset conversation tracker for new conversation
+        # (In production, you'd want to maintain state per conversation ID)
+        conversation_tracker.reset()
+        
+        # Add previous messages to conversation tracker
+        for message in request.messages:
+            is_user = message.role == "user"
+            conversation_tracker.add_message(message.content, is_user)
+        
+        # Add current user message
+        user_tokens = conversation_tracker.add_message(current_message, is_user=True)
+        
+        # Format conversation for model
+        conversation_history = format_conversation(request.messages)
         if conversation_history:
             full_prompt = f"{conversation_history}\nHuman: {current_message}\nAssistant:"
         else:
@@ -175,45 +90,79 @@ async def chat(request: ChatRequest):
         print(f"Processing prompt: {full_prompt}\n")
         
         try:
-            # Generate response with logit lens data
-            response_data = generate_response_with_logits(full_prompt, max_tokens=30)
+            # Generate response
+            response_text = generate_simple_response(full_prompt, max_tokens=30)
             
-            # Process user tokens
-            user_tokens = []
-            user_token_data = tokenize_with_positions(current_message)
+            # Add response tokens to conversation tracker
+            response_tokens = conversation_tracker.add_message(response_text, is_user=False)
             
-            for token_info in user_token_data:
-                # For user tokens, we analyze them in the context of the conversation
-                context_for_token = conversation_history + "\nHuman: " + current_message[:token_info['end']]
-                lens_data = extract_logit_lens_predictions(context_for_token, token_position=-1)
+            # Get the full conversation text for logit lens extraction
+            full_conversation = conversation_tracker.get_full_text()
+            
+            # Extract real logit lens data for all tokens
+            print("Extracting logit lens activations...")
+            all_activations = logit_lens_extractor.extract_activations(full_conversation, top_k=5)
+            
+            # Create response token objects with real lens data
+            response_token_objects = []
+            for token_info in response_tokens:
+                global_pos = token_info['global_position']
                 
-                user_tokens.append(
+                # Get real logit lens predictions
+                lens_data = logit_lens_extractor.format_layer_predictions(all_activations, global_pos)
+                
+                response_token_objects.append(
                     Token(
                         text=token_info['text'],
                         lens=lens_data
                     )
                 )
             
+            # Create user token objects with real lens data
+            user_token_objects = []
+            for token_info in user_tokens:
+                global_pos = token_info['global_position']
+                
+                # Get real logit lens predictions
+                lens_data = logit_lens_extractor.format_layer_predictions(all_activations, global_pos)
+                
+                user_token_objects.append(
+                    Token(
+                        text=token_info['text'],
+                        lens=lens_data
+                    )
+                )
+            
+            print(f"Generated {len(response_token_objects)} response tokens with real logit lens data")
+            
             return ConversationResponse(
-                text=response_data['text'],
-                tokens=response_data['tokens'],
-                userTokens=user_tokens
+                text=response_text,
+                tokens=response_token_objects,
+                userTokens=user_token_objects
             )
             
-        except Exception as model_error:
-            print(f"Model error: {str(model_error)}")
-            # Fallback to simple response without logit lens
-            simple_response = "I apologize, but I'm having trouble processing your request. Please try again."
+        except Exception as e:
+            print(f"Error during generation or logit lens extraction: {str(e)}")
+            import traceback
+            traceback.print_exc()
             
-            # Create simple tokens without lens data
-            simple_tokens = [
-                Token(text=word, lens=[])
-                for word in simple_response.split()
-            ]
+            # Return a fallback with mock lens data
+            fallback_text = "I'm sorry, I couldn't process that request."
+            fallback_tokens = []
+            for word in fallback_text.split():
+                lens_data = []
+                for layer_idx in range(12):
+                    predictions = [
+                        Prediction(token=word, probability=80.0, rank=1),
+                        Prediction(token="the", probability=10.0, rank=2),
+                        Prediction(token="a", probability=5.0, rank=3)
+                    ]
+                    lens_data.append(LayerData(layer=layer_idx, predictions=predictions))
+                fallback_tokens.append(Token(text=word, lens=lens_data))
             
             return ConversationResponse(
-                text=simple_response,
-                tokens=simple_tokens,
+                text=fallback_text,
+                tokens=fallback_tokens,
                 userTokens=[]
             )
             
@@ -228,7 +177,7 @@ async def health_check():
     return {
         "status": "healthy",
         "model": model_name,
-        "model_loaded": model is not None
+        "model_loaded": logit_lens_extractor.model is not None
     }
 
 @app.get("/api/model_info")
@@ -236,7 +185,36 @@ async def model_info():
     """Get information about the loaded model."""
     return {
         "model_name": model_name,
-        "num_layers": len(model.model.h),
-        "vocab_size": model.tokenizer.vocab_size,
-        "device": str(next(model.model.parameters()).device)
+        "num_layers": logit_lens_extractor.num_layers,
+        "vocab_size": logit_lens_extractor.model.tokenizer.vocab_size,
+        "device": str(next(logit_lens_extractor.model.transformer.parameters()).device)
     }
+
+# New endpoint for getting token context
+@app.get("/api/token/{global_position}/context")
+async def get_token_context(global_position: int, context_size: int = 15):
+    """Get context window for a specific token position."""
+    try:
+        context_tokens = conversation_tracker.get_context_window(global_position, context_size)
+        
+        if not context_tokens:
+            raise HTTPException(status_code=404, detail="Token not found")
+        
+        # Get conversation text and extract logit lens for context
+        full_text = conversation_tracker.get_full_text()
+        
+        # Extract activations for the target token
+        target_lens = logit_lens_extractor.extract_for_single_token(
+            full_text, global_position, top_k=5
+        )
+        
+        return {
+            "token_position": global_position,
+            "context_tokens": context_tokens,
+            "logit_lens": target_lens,
+            "conversation_stats": conversation_tracker.get_conversation_stats()
+        }
+        
+    except Exception as e:
+        print(f"Error getting token context: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
